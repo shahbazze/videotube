@@ -4,27 +4,28 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 import { Api_Response } from "../utils/apiResponse.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
-const generateAccessAndResfreshToken = async (userId) => 
-  {
+const generateAccessAndResfreshToken = async (userId) => {
   try {
-    const user = await User.findById(userId)
-    const accessToken = user.generateAccessToken()
-    const refreshtoken = user.generateRefreshToken()
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshtoken = user.generateRefreshToken();
 
-    user.refreshtoken=refreshtoken
-    await user.save({validateBeforeSave :false})
+    user.refreshtoken = refreshtoken;
+    await user.save({ validateBeforeSave: false });
 
     return {
-      accessToken,refreshtoken
-    }
+      accessToken,
+      refreshtoken,
+    };
   } catch (error) {
     throw new Api_Error(
       500,
       "something went wrong while generating refresh and access token "
     );
   }
-}
+};
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
 
@@ -106,48 +107,97 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Api_Error(401, "incorrect user password");
   }
 
-const {accessToken , refreshtoken} = await generateAccessAndResfreshToken(user._id)
+  const { accessToken, refreshtoken } = await generateAccessAndResfreshToken(
+    user._id
+  );
 
-const logInUser=await User.findById(user._id).
-select("-password -refreshToken")
+  const logInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
 
-const options={
-  httpOnly:true,
-  secure:true
-}
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
 
-return res.status(200).cookie("accessToken",accessToken,options).
-cookie("refreshtoken",refreshtoken,options)
-.json(
-  
-    new Api_Response(200,
-      {
-        user:logInUser ,accessToken,refreshtoken
-      },
-      "user loggedin successfully"
-    )
-)
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshtoken", refreshtoken, options)
+    .json(
+      new Api_Response(
+        200,
+        {
+          user: logInUser,
+          accessToken,
+          refreshtoken,
+        },
+        "user loggedin successfully"
+      )
+    );
 });
 
-const logoutUser=asyncHandler(async(req,res)=>{
- await User.findByIdAndUpdate(
+const logoutUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set:{refreshToken:undefined}
+      $set: { refreshToken: undefined },
     },
     {
-      new:true
+      new: true,
     }
-  )
-  const options={
-    httpOnly:true,
-    secure:true
+  );
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshtoken", options)
+    .json(new Api_Response(200, {}, "user loggedout successfully"));
+});
+
+const refreshAcessToken = asyncHandler(async (req, ref) => {
+  const icomingrefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!icomingrefreshToken) {
+    throw new Api_Error(401, "unAuthorized access");
   }
+  try {
+    const decodedToken = jwt.verify(
+      icomingrefreshToken,
+      process.env.REFERSH_TOKEN_SECRET
+    );
+  
+   const user = await User.findById(decodedToken?._id)
+  
+   if (!user) {
+    throw new Api_Error(401, "Invalid refresh Token");
+  }
+  if(icomingrefreshToken !== user.refreshToken)
+    {
+      throw new Api_Error(401,"Refresh Token is Expired or Invalid")
+    }
+    const options ={
+      httpOnly:true,
+      secure:true
+    }
+  const {accessToken,newrefreshtoken}=await generateAccessAndResfreshToken(user._id)
+  
   return  res
   .status(200)
-  .clearCookie("accessToken",options)
-  .clearCookie("refreshtoken",options)
-  .json(new Api_Response (200,{},"user loggedout successfully"))
-})
+  .cookie("accessToke",accessToken,options)
+  .cookie("refreshToken",newrefreshtoken,options)
+  .json(
+    new Api_Response(200,accessToken,newrefreshtoken,
+      "Access Token refresh successfully"
+    )
+  )
+  } catch (error) {
+    throw new Api_Error(401,error?.message || "Inalid refresh token")
+  }
 
-export { registerUser, loginUser,logoutUser };
+});
+
+export { registerUser, loginUser, logoutUser , refreshAcessToken };
