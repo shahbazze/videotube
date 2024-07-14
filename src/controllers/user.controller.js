@@ -1,10 +1,14 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Api_Error } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary , deleteFileFromCloudinar} from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFileFromCloudinary,
+} from "../utils/cloudinary.js";
 
 import { Api_Response } from "../utils/apiResponse.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import mongoose from "mongoose";
 
 const generateAccessAndResfreshToken = async (userId) => {
   try {
@@ -254,89 +258,197 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new Api_Error(400, "avatar is missing");
   }
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  if(!avatar)
-    {
-      throw new Api_Error(400, "Error while uploading avatar on cloudniry");
-    }
-    // also delete old avatr from cloudnry
-    // self work 
-    // get old avatar (url) from database to delete it from cloudnry
-    const userAvataroldLink = await User.findById(
-      req.user?._id
-    )
-    userAvataroldLink=userAvataroldLink.avatar;
-   
-    const user = await User.findByIdAndUpdate(
-      req.user?._id,
-      {
-        $set:{
-          avatar:avatar.url
-        }
-      },
-      {
-        new:true
-      }.select("-password")
-    )
+  if (!avatar) {
+    throw new Api_Error(400, "Error while uploading avatar on cloudniry");
+  }
+  // also delete old avatr from cloudnry
+  // self work
+  // get old avatar (url) from database to delete it from cloudnry
+  const userAvataroldLink = await User.findById(req.user?._id);
+  userAvataroldLink = userAvataroldLink.avatar;
 
-    // now delete 
-    try {
-      await deleteFileFromCloudinar(userAvataroldLink)
-     } catch (error) {
-      throw new Api_Error(501,"failed to delete image from cloudnry")
-     }
-    return res
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    {
+      new: true,
+    }.select("-password")
+  );
+
+  // now delete
+  try {
+    await deleteFileFromCloudinary(userAvataroldLink);
+  } catch (error) {
+    throw new Api_Error(501, "failed to delete image from cloudnry");
+  }
+  return res
     .status(200)
-    .json(
-      new Api_Response(200,user,"Avatar updated successfully")
-    )
+    .json(new Api_Response(200, user, "Avatar updated successfully"));
 });
 
-
-// update cover image 
+// update cover image
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath) {
     throw new Api_Error(400, "cover ImageLocal is missing");
   }
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-  if(!coverImage)
+  if (!coverImage) {
+    throw new Api_Error(400, "Error while uploading coverImage on cloudniry");
+  }
+  // also delete old coverImage if it was there from cloudnry
+  // coverImage was optional so it may not there
+  // self work
+  // get old coverImage (url) from database to delete it from cloudnry
+
+  const userCoverImageLink = await User.findById(req.user?._id);
+  userCoverImageLink = userCoverImageLink.avatar;
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
     {
-      throw new Api_Error(400, "Error while uploading coverImage on cloudniry");
-    }
-    // also delete old coverImage if it was there from cloudnry
-    // coverImage was optional so it may not there
-    // self work 
-    // get old coverImage (url) from database to delete it from cloudnry
-    
-    const userCoverImageLink = await User.findById(
-      req.user?._id
-    )
-    userCoverImageLink=userCoverImageLink.avatar;
-   
-    
-    
-    const user =   await User.findByIdAndUpdate(
-      req.user?._id,
-      {
-        $set:{
-          coverImage:coverImage.url
-        }
+      $set: {
+        coverImage: coverImage.url,
       },
-      {
-        new:true
-      }.select("-password")
-    )
-    // now delete 
-    try {
-      await deleteFileFromCloudinar(userCoverImageLink)
-     } catch (error) {
-      throw new Api_Error(501,"failed to delete image from cloudnry")
-     }
-    return res
+    },
+    {
+      new: true,
+    }.select("-password")
+  );
+  // now delete
+  try {
+    await deleteFileFromCloudinary(userCoverImageLink);
+  } catch (error) {
+    throw new Api_Error(501, "failed to delete image from cloudnry");
+  }
+  return res
+    .status(200)
+    .json(new Api_Response(200, user, "Cover Image updated successfully"));
+});
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim) {
+    throw new Api_Error(400, "username is missing");
+  }
+  const channel = await User.aggregate([
+    {
+      $match: username?.toLowerCase(),
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscribers"] },
+            $then: true,
+            $else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1, // total subscriber of our channel
+        channelsSubscribedToCount: 1, //which channel we subscribed
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
+  if (!channel?.length) {
+    throw new Api_Error(404, "channel does not exists");
+  }
+  // console log the channel
+  // just to check it
+  return res
     .status(200)
     .json(
-      new Api_Response(200,user,"Cover Image updated successfully")
+      new Api_Response(200, channel[0], "user channel feteched successfullly")
+    );
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await user.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup:{
+        from:"videos",
+        localField:"watchHistory",
+        foreignField:"_id",
+        as:"watchHistory",
+        pipeline:[
+          {
+            $lookup:{
+              from:"users",
+              localField:"owner",
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    fullName:1,
+                    username:1,
+                    avatar:1,
+
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields:{
+              owner:{
+                $first:"$owner"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]);
+
+  return res
+  .status
+  .json(
+    new Api_Response(200,user[0].watchHistory,
+      "watch history feteched successfully"
     )
+  )
 });
 
 export {
@@ -346,7 +458,9 @@ export {
   refreshAcessToken,
   changeCurrentUserPassword,
   getCurrentUser,
- uodateAccountDetail,
+  uodateAccountDetail,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory,
 };

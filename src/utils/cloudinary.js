@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { Api_Error } from "./apiError";
+
+import { Api_Error } from "./apiError.js";
 
 // Configuration
 cloudinary.config({
@@ -29,21 +30,19 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-const deleteFileFromCloudinar=async(fileUrl)=>{
+const deleteFileFromCloudinary = async (fileUrl) => {
   try {
-    fileUrl=fileUrl.trim();
-    if(fileUrl ==="")
-      {
-        return null;
-      }
-      const publicId = fileUrl.split('/').pop().split('.')[0];
+    fileUrl = fileUrl.trim();
+    if (fileUrl === "") {
+      return null;
+    }
+    const publicId = fileUrl.split("/").pop().split(".")[0];
 
-      const response=await cloudinary.uploader.destroy(publicId)
-    return response.result === "ok"?true:false;
-        
+    const response = await cloudinary.uploader.destroy(publicId);
+    return response.result === "ok" ? true : false;
   } catch (error) {
-    throw new Api_Error(500,"failed to delete old image from cloudinary")
+    throw new Api_Error(500, "failed to delete old image from cloudinary");
   }
 };
 
-export { uploadOnCloudinary,deleteFileFromCloudinar };
+export { uploadOnCloudinary, deleteFileFromCloudinary };
