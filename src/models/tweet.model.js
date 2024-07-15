@@ -1,15 +1,15 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, {Schema} from "mongoose";
 
-const tweetschema = new Schema({
-    constent:{
-        type:String,
-        required:true
+const tweetSchema = new Schema({
+    content: {
+        type: String,
+        required: true
     },
     owner: {
         type: Schema.Types.ObjectId,
-        ref: "User",
-      },
+        ref: "User"
+    }
+}, {timestamps: true})
 
-},{timestamps:true})
 
-export const tweet=mongoose.model("tweet",tweetschema)
+export const Tweet = mongoose.model("Tweet", tweetSchema)
