@@ -132,7 +132,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
   // Proceed with using `videoFileLocalpath` for further processing
 });
-// next
+// next file
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: get video by id
