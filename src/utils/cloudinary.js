@@ -30,7 +30,7 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-const deleteFileFromCloudinary = async (fileUrl) => {
+const deleteFileFromCloudinary = async (fileUrl, resourceType = 'image') => {
   try {
     fileUrl = fileUrl.trim();
     if (fileUrl === "") {
@@ -38,7 +38,7 @@ const deleteFileFromCloudinary = async (fileUrl) => {
     }
     const publicId = fileUrl.split("/").pop().split(".")[0];
 
-    const response = await cloudinary.uploader.destroy(publicId);
+    const response = await cloudinary.uploader.destroy(publicId,{resource_type:resourceType});
     return response.result === "ok" ? true : false;
   } catch (error) {
     throw new Api_Error(500, "failed to delete old image from cloudinary");
