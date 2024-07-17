@@ -454,6 +454,13 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   )
 });
 
+const getuser = asyncHandler(async (req, res) => {
+
+ const useid="6698169824bc0adfceec0d90";
+ const abcd=await User.findById(useid);
+ console.log(abcd)
+})
+getuser()
 export {
   registerUser,
   loginUser,
