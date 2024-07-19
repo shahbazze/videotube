@@ -34,9 +34,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
   }
 
   // Debugging logs to inspect match object
-  console.log("Query:", query);
-  console.log("UserId:", userId);
-  console.log("Match condition:", JSON.stringify(match, null, 2));
+  // console.log("Query:", query);
+  // console.log("UserId:", userId);
+  // console.log("Match condition:", JSON.stringify(match, null, 2));
 
   const sortOptions = {};
   sortOptions[sortBy] = sortType === "asc" ? 1 : -1;
