@@ -460,7 +460,7 @@ const getuser = asyncHandler(async (req, res) => {
  const abcd=await User.findById(useid);
  console.log(abcd)
 })
-// getuser()
+//getuser()
 export {
   registerUser,
   loginUser,

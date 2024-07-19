@@ -68,10 +68,10 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to return subscriber list of a channel
 // Controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-  const { subscriberId } = req.params; // Fetch channel ID from request parameters
+  const { channelId } = req.params; // Fetch channel ID from request parameters
 
-  // Check if subscriberId is provided
-  if (!subscriberId) {
+  // Check if channelId is provided
+  if (!channelId) {
     return res.status(404).json(new Api_Error(404, "Provide channel ID"));
   }
 
@@ -80,7 +80,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const sub = await Subscription.aggregate([
       {
         $match: {
-          channel: new mongoose.Types.ObjectId(subscriberId), // Match documents with the specified channel ID
+          channel: new mongoose.Types.ObjectId(channelId), // Match documents with the specified channel ID
         },
       },
       {

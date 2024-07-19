@@ -7,7 +7,6 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const LikedBy = req.user._id;
     // TODO: toggle like on video
-    
     try 
     {
       // Check if the user already liked the video and unlike it if so
