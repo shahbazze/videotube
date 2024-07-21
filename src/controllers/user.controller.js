@@ -41,9 +41,11 @@ const registerUser = asyncHandler(async (req, res) => {
   const existeduser = await User.findOne({
     $or: [{ username }, { email }],
   });
-  return res
+  if (existeduser) {
+    return res
     .status(409)
-    .json(new Api_Response(409, [], "user already exists change user name and email"));
+    .json(new Api_Response(409, createdUser, "Username or Email already exists"));
+  }
 
   const avatarlocalpath = req.files?.avatar[0]?.path;
 
