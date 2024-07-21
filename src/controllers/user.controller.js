@@ -82,11 +82,11 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
-    throw new Api_Error(500, "something went wrong while regestring user");
+    throw new Api_Error(409, "something went wrong while regestring user");
   }
 
   return res
-    .status(201)
+    .status(200)
     .json(new Api_Response(200, createdUser, "User regesitred successfully"));
 });
 
