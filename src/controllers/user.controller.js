@@ -41,9 +41,9 @@ const registerUser = asyncHandler(async (req, res) => {
   const existeduser = await User.findOne({
     $or: [{ username }, { email }],
   });
-  if (existeduser) {
-    throw new Api_Error(409, "user with emil or username already exists");
-  }
+  return res
+    .status(409)
+    .json(new Api_Response(409, [], "user already exists change user name and email"));
 
   const avatarlocalpath = req.files?.avatar[0]?.path;
 
@@ -82,7 +82,7 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
-    throw new Api_Error(409, "something went wrong while regestring user");
+    throw new Api_Error(500, "something went wrong while regestring user");
   }
 
   return res
